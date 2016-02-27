@@ -29,10 +29,12 @@ import com.clarifai.api.RecognitionRequest;
 import com.clarifai.api.RecognitionResult;
 import com.clarifai.api.Tag;
 import com.clarifai.api.exception.ClarifaiException;
+import com.firebase.client.Firebase;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 
 import static android.provider.MediaStore.Images.Media;
 
@@ -43,6 +45,9 @@ public class MainActivity extends Activity {
 
     private final ClarifaiClient client = new ClarifaiClient(Credentials.CLIENT_ID,
             Credentials.CLIENT_SECRET);
+    //ArrayList<Bitmap> img_bitmap = new ArrayList<Bitmap>();
+
+
     private Button selectButton;
     private ImageView imageView;
     private TextView textView;
@@ -50,11 +55,15 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+       Firebase.setAndroidContext(this);
         setContentView(R.layout.activity_main);
+        Firebase myFirebaseRef = new Firebase("https://<blazing-inferno-4590>.firebaseio.com/");
         imageView = (ImageView) findViewById(R.id.image_view);
         textView = (TextView) findViewById(R.id.textdisp);
         //Bitmap bMap = BitmapFactory.decodeFile("/storage/emulated/0/DCIM/Camera" + "/20160227_010011.jpg");
         selectButton = (Button) findViewById(R.id.select_button);
+        myFirebaseRef.child("message").setValue("Do you have data? You'll love Firebase.");
+
         selectButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -113,24 +122,10 @@ public class MainActivity extends Activity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent intent) {
         super.onActivityResult(requestCode, resultCode, intent);
-        String[] projection = {MediaStore.Images.Media._ID, MediaStore.Images.Media.DATA};
-        Cursor cursor = managedQuery(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, projection, null, null, MediaStore.Images.Media._ID);
-        int count = cursor.getCount();
-        int image_column_index = cursor.getColumnIndex(MediaStore.Images.Media._ID);
-        int image_path_index = cursor.getColumnIndex(MediaStore.Images.Media.DATA);
-        String[] path = new String[count];
-        Bitmap[] bt = new Bitmap[count];
-        for (int i = 0; i < count; i++) {
-            cursor.moveToPosition(i);
-            int id = cursor.getInt(image_column_index);
-            path[i] = cursor.getString(image_path_index);
-            bt[i] = MediaStore.Images.Thumbnails.getThumbnail(getApplicationContext().getContentResolver(), id, MediaStore.Images.Thumbnails.MICRO_KIND, null);
-            if (requestCode == CODE_PICK && resultCode == RESULT_OK) {
-                // The user picked an image. Send it to Clarifai for recognition.
-                Log.d(TAG, "User picked image: " + intent.getData());
-                //Bitmap bitmap = loadBitmapFromUri(intent.getData());
-                if (bt != null) {
-                    imageView.setImageBitmap(bt[i]);
+
+                Bitmap bitmap = loadBitmapFromUri(intent.getData());
+                if (bitmap != null) {
+                    imageView.setImageBitmap(bitmap);
                     selectButton.setEnabled(false);
                     new AsyncTask<Bitmap, Void, RecognitionResult>() {
                         @Override
@@ -142,11 +137,11 @@ public class MainActivity extends Activity {
                         protected void onPostExecute(RecognitionResult result) {
                             updateUIForResult(result);
                         }
-                    }.execute(bt);
+                    }.execute(bitmap);
                 }
             }
-        }
-    }
+
+
 
 
 
