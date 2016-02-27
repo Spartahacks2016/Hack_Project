@@ -1,9 +1,13 @@
 package com.hackillinoisproj2016.android.image_test;
 
+import android.app.Activity;
 import android.content.Intent;
+import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+//import android.net.Credentials;
 import android.net.Uri;
+//import android.nfc.Tag;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
@@ -20,50 +24,131 @@ import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import com.clarifai.api.ClarifaiClient;
+import com.clarifai.api.RecognitionRequest;
+import com.clarifai.api.RecognitionResult;
+import com.clarifai.api.Tag;
+import com.clarifai.api.exception.ClarifaiException;
+
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 
-public class MainActivity extends AppCompatActivity {
-    private Button selectButton;
+import static android.provider.MediaStore.Images.Media;
+
+public class MainActivity extends Activity {
+    private static final String TAG = MainActivity.class.getSimpleName();
+
     private static final int CODE_PICK = 1;
-    private static final String TAG = "Srikar";
+
+    private final ClarifaiClient client = new ClarifaiClient(Credentials.CLIENT_ID,
+            Credentials.CLIENT_SECRET);
+    private Button selectButton;
     private ImageView imageView;
+    private TextView textView;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         imageView = (ImageView) findViewById(R.id.image_view);
+        textView = (TextView) findViewById(R.id.textdisp);
         //Bitmap bMap = BitmapFactory.decodeFile("/storage/emulated/0/DCIM/Camera" + "/20160227_010011.jpg");
         selectButton = (Button) findViewById(R.id.select_button);
         selectButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 // Send an intent to launch the media picker.
-                final Intent intent = new Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
-                startActivityForResult(intent, CODE_PICK);
+                //final Intent intent = new Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+                //startActivityForResult(intent, CODE_PICK);
+               /* String[] projection = new String[]{
+                        MediaStore.Images.Media._ID,
+                        MediaStore.Images.Media.BUCKET_DISPLAY_NAME,
+                        MediaStore.Images.Media.DATE_TAKEN
+                };
+
+
+                Uri uri_1 = MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
+
+
+                Cursor cur = getContentResolver().query(uri_1,
+                        projection, // Which columns to return
+                        null,       // Which rows to return (all rows)
+                        null,       // Selection arguments (none)
+                        null        // Ordering
+                );
+                if(cur.moveToFirst()){
+                    do{
+                        Uri uri = cur.getNotificationUri()
+                    }
+                }
+
             }
+        });*/
+                //Bitmap bitmap = loadBitmapFromUri(intent.getData());
+                //imageView.setImageBitmap(bitmap);
+               /* String[] projection = {MediaStore.Images.Media._ID, MediaStore.Images.Media.DATA};
+                Cursor cursor = managedQuery(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, projection, null, null, MediaStore.Images.Media._ID);
+                int count = cursor.getCount();
+                int image_column_index = cursor.getColumnIndex(MediaStore.Images.Media._ID);
+                int image_path_index = cursor.getColumnIndex(MediaStore.Images.Media.DATA);
+                String[] path = new String[count];
+                Bitmap[] bt = new Bitmap[count];
+                for (int i = 0; i < count; i++)
+                {
+                    cursor.moveToPosition(i);
+                    int id = cursor.getInt(image_column_index);
+                    path[i] = cursor.getString(image_path_index);
+                    bt[i] = MediaStore.Images.Thumbnails.getThumbnail(getApplicationContext().getContentResolver(), id, MediaStore.Images.Thumbnails.MICRO_KIND, null)*/;
+                    final Intent intent = new Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+                    startActivityForResult(intent, CODE_PICK);
+
+
+                }
+
         });
-        //Bitmap bitmap = loadBitmapFromUri(intent.getData());
-        //imageView.setImageBitmap(bitmap);
-
-
-
     }
 
-    @Override protected void onActivityResult(int requestCode, int resultCode, Intent intent) {
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent intent) {
         super.onActivityResult(requestCode, resultCode, intent);
-        if (requestCode == CODE_PICK && resultCode == RESULT_OK) {
-            // The user picked an image. Send it to Clarifai for recognition.
-            Log.d(TAG, "User picked image: " + intent.getData());
-            Bitmap bitmap = loadBitmapFromUri(intent.getData());
-            if (bitmap != null) {
-                imageView.setImageBitmap(bitmap);
-                selectButton.setEnabled(false);
+        String[] projection = {MediaStore.Images.Media._ID, MediaStore.Images.Media.DATA};
+        Cursor cursor = managedQuery(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, projection, null, null, MediaStore.Images.Media._ID);
+        int count = cursor.getCount();
+        int image_column_index = cursor.getColumnIndex(MediaStore.Images.Media._ID);
+        int image_path_index = cursor.getColumnIndex(MediaStore.Images.Media.DATA);
+        String[] path = new String[count];
+        Bitmap[] bt = new Bitmap[count];
+        for (int i = 0; i < count; i++) {
+            cursor.moveToPosition(i);
+            int id = cursor.getInt(image_column_index);
+            path[i] = cursor.getString(image_path_index);
+            bt[i] = MediaStore.Images.Thumbnails.getThumbnail(getApplicationContext().getContentResolver(), id, MediaStore.Images.Thumbnails.MICRO_KIND, null);
+            if (requestCode == CODE_PICK && resultCode == RESULT_OK) {
+                // The user picked an image. Send it to Clarifai for recognition.
+                Log.d(TAG, "User picked image: " + intent.getData());
+                //Bitmap bitmap = loadBitmapFromUri(intent.getData());
+                if (bt != null) {
+                    imageView.setImageBitmap(bt[i]);
+                    selectButton.setEnabled(false);
+                    new AsyncTask<Bitmap, Void, RecognitionResult>() {
+                        @Override
+                        protected RecognitionResult doInBackground(Bitmap... bitmaps) {
+                            return recognizeBitmap(bitmaps[0]);
+                        }
 
-
+                        @Override
+                        protected void onPostExecute(RecognitionResult result) {
+                            updateUIForResult(result);
+                        }
+                    }.execute(bt);
+                }
             }
         }
     }
+
+
 
     /** Loads a Bitmap from a content URI returned by the media picker. */
    private Bitmap loadBitmapFromUri(Uri uri) {
@@ -86,7 +171,48 @@ public class MainActivity extends AppCompatActivity {
             Log.e(TAG, "Error loading image: " + uri, e);
         }
         return null;
-    }
+   }
+   private RecognitionResult recognizeBitmap(Bitmap bitmap) {
+        try {
+            // Scale down the image. This step is optional. However, sending large images over the
+            // network is slow and  does not significantly improve recognition performance.
+            Bitmap scaled = Bitmap.createScaledBitmap(bitmap, 320,
+                    320 * bitmap.getHeight() / bitmap.getWidth(), true);
 
+            // Compress the image as a JPEG.
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            scaled.compress(Bitmap.CompressFormat.JPEG, 90, out);
+            byte[] jpeg = out.toByteArray();
+
+            // Send the JPEG to Clarifai and return the result.
+            return client.recognize(new RecognitionRequest(jpeg)).get(0);
+        } catch (ClarifaiException e) {
+            Log.e(TAG, "Clarifai error", e);
+            return null;
+        }
+   }
+
+    /** Updates the UI by displaying tags for the given result. */
+    private void updateUIForResult(RecognitionResult result) {
+        if (result != null) {
+            if (result.getStatusCode() == RecognitionResult.StatusCode.OK) {
+                // Display the list of tags in the UI.
+                StringBuilder b = new StringBuilder();
+
+                for (Tag tag : result.getTags()) {
+                 //  if(tag.getName().equals("wood") || tag.getName().equals("symbol"))
+                        b.append(b.length() > 0 ? ", " : "").append(tag.getName());
+
+                }
+                textView.setText("Tags:\n" + b);
+            } else {
+                Log.e(TAG, "Clarifai: " + result.getStatusMessage());
+                textView.setText("Sorry, there was an error recognizing your image.");
+            }
+        } else {
+          //  textView.setText("Sorry, there was an error recognizing your image.");
+        }
+        selectButton.setEnabled(true);
+    }
 
 }
