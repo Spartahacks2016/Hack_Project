@@ -107,7 +107,7 @@ public class RecognitionActivity extends Activity {
   }
 
   /** Sends the given bitmap to Clarifai for recognition and returns the result. */
-  private RecognitionResult recognizeBitmap(Bitmap bitmap) {
+  public RecognitionResult recognizeBitmap(Bitmap bitmap) {
     try {
       // Scale down the image. This step is optional. However, sending large images over the
       // network is slow and  does not significantly improve recognition performance.

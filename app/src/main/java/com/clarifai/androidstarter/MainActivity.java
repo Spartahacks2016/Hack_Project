@@ -13,6 +13,7 @@ import android.app.Activity;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseAdapter;
@@ -20,34 +21,12 @@ import android.widget.GridView;
 import android.widget.ImageView;
 import android.widget.Toast;
 
+import com.clarifai.api.RecognitionResult;
+import com.clarifai.api.Tag;
+
+
 public class MainActivity extends Activity {
-    @Override
-    public void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-        ArrayList<File> fileArrayList = new ArrayList<File>();
-        GridView gridview = (GridView) findViewById(R.id.gridview);
-        myImageAdapter = new ImageAdapter(this);
-        gridview.setAdapter(myImageAdapter);
 
-        String ExternalStorageDirectoryPath = Environment
-                .getExternalStorageDirectory()
-                .getAbsolutePath();
-
-        String targetPath = ExternalStorageDirectoryPath + "/DCIM/Camera/";
-
-        Toast.makeText(getApplicationContext(), targetPath, Toast.LENGTH_LONG).show();
-        File targetDirector = new File(targetPath);
-        int iterator = 0;
-        File[] files = targetDirector.listFiles();
-        for (File file : files){
-            System.out.println(file.getName());
-            myImageAdapter.add(file.getAbsolutePath());
-            fileArrayList.add(file);
-
-
-        }
-    }
 
     public class ImageAdapter extends BaseAdapter {
 
@@ -137,7 +116,50 @@ public class MainActivity extends Activity {
     }
 
     ImageAdapter myImageAdapter;
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+        RecognitionActivity recognitionActivity = new RecognitionActivity();
+        ImageAdapter imageAdapter = new ImageAdapter(getApplicationContext());
+        ArrayList<File> fileArrayList = new ArrayList<File>();
+        GridView gridview = (GridView) findViewById(R.id.gridview);
+        myImageAdapter = new ImageAdapter(this);
+        gridview.setAdapter(myImageAdapter);
 
+        String ExternalStorageDirectoryPath = Environment
+                .getExternalStorageDirectory()
+                .getAbsolutePath();
 
+        String targetPath = ExternalStorageDirectoryPath + "/DCIM/Camera/";
+
+        Toast.makeText(getApplicationContext(), targetPath, Toast.LENGTH_LONG).show();
+        File targetDirector = new File(targetPath);
+
+        ArrayList<String> taggingList = new ArrayList<>();
+        File[] files = targetDirector.listFiles();
+        for (File file : files){
+            System.out.println(file.getName());
+            myImageAdapter.add(file.getAbsolutePath());
+            fileArrayList.add(file);
+            taggingList = updateUIForResult(recognitionActivity.recognizeBitmap(imageAdapter.decodeSampledBitmapFromUri(targetPath, 8, 8)));
+
+        }
+    }
+    private ArrayList<String> updateUIForResult(RecognitionResult result) {
+        ArrayList<String> tagList = new ArrayList<>();
+
+        if (result != null) {
+            if (result.getStatusCode() == RecognitionResult.StatusCode.OK) {
+                // Display the list of tags in the UI.
+                StringBuilder b = new StringBuilder();
+                for (Tag tag : result.getTags()) {
+                    tagList.add(tag.getName());
+                }
+            }
+        }
+        return tagList;
+    }
 
 }
+
