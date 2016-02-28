@@ -40,7 +40,7 @@ public class RecognitionActivity extends Activity {
   private ImageView imageView;
   private TextView textView;
 
-  @Override protected void onCreate(Bundle savedInstanceState) {
+  /*@Override protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_recognition);
     imageView = (ImageView) findViewById(R.id.image_view);
@@ -55,7 +55,7 @@ public class RecognitionActivity extends Activity {
         startActivityForResult(intent, CODE_PICK);
       }
     });
-  }
+  }*/
 
   @Override protected void onActivityResult(int requestCode, int resultCode, Intent intent) {
     super.onActivityResult(requestCode, resultCode, intent);
@@ -70,10 +70,13 @@ public class RecognitionActivity extends Activity {
 
         // Run recognition on a background thread since it makes a network call.
         new AsyncTask<Bitmap, Void, RecognitionResult>() {
-          @Override protected RecognitionResult doInBackground(Bitmap... bitmaps) {
+          @Override
+          protected RecognitionResult doInBackground(Bitmap... bitmaps) {
             return recognizeBitmap(bitmaps[0]);
           }
-          @Override protected void onPostExecute(RecognitionResult result) {
+
+          @Override
+          protected void onPostExecute(RecognitionResult result) {
             updateUIForResult(result);
           }
         }.execute(bitmap);
@@ -82,6 +85,9 @@ public class RecognitionActivity extends Activity {
       }
     }
   }
+
+
+
 
   /** Loads a Bitmap from a content URI returned by the media picker. */
   private Bitmap loadBitmapFromUri(Uri uri) {

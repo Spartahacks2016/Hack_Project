@@ -6,28 +6,162 @@ package com.clarifai.androidstarter;
 import java.io.File;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 
+import android.content.Intent;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
 import android.app.Activity;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.os.StrictMode;
+import android.provider.MediaStore;
+import android.provider.Settings;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseAdapter;
+import android.widget.Button;
+import android.widget.EditText;
 import android.widget.GridView;
 import android.widget.ImageView;
 import android.widget.Toast;
 
+import com.clarifai.api.ClarifaiClient;
+import com.clarifai.api.RecognitionRequest;
 import com.clarifai.api.RecognitionResult;
 import com.clarifai.api.Tag;
 
 
 public class MainActivity extends Activity {
 
+    Button searchBtn;
+    EditText searchString;
 
+    HashMap<String, ArrayList<File>> map;
+
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+
+        searchString = (EditText) findViewById(R.id.search_string);
+
+        StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
+        StrictMode.setThreadPolicy(policy);
+        // picturesRef = myFirebaseRef.child("Pictures");
+        //picturesRef.addChildEventListener(new ChildEventListener();
+
+        ImageAdapter imageAdapter = new ImageAdapter(getApplicationContext());
+        ArrayList<File> fileArrayList = new ArrayList<File>();
+        GridView gridview = (GridView) findViewById(R.id.gridview);
+        myImageAdapter = new ImageAdapter(this);
+        gridview.setAdapter(myImageAdapter);
+
+        String ExternalStorageDirectoryPath = Environment
+                .getExternalStorageDirectory()
+                .getAbsolutePath();
+
+        String targetPath = ExternalStorageDirectoryPath + "/DCIM/Camera/";
+
+        Toast.makeText(getApplicationContext(), targetPath, Toast.LENGTH_LONG).show();
+        File targetDirector = new File(targetPath);
+
+        ArrayList<String> taggingList = new ArrayList<>();
+        File[] files = targetDirector.listFiles();
+        ClarifaiClient clarifai = new ClarifaiClient("QwyVMelyYYyB57bUcmAj5pNJ8DFbF2vX_otHSwP1", "uTvXRCBEaenYGwAbae56BIcxavMduS6TtJHMnYCZ");
+        for (File file : files) {
+            //myImageAdapter.add(file.getAbsolutePath());
+            fileArrayList.add(file);
+            map = new HashMap<>();
+            try{
+                List<RecognitionResult> results =
+                        clarifai.recognize(new RecognitionRequest(file));
+                for (Tag tag : results.get(0).getTags())
+                    if(map.containsKey(tag.getName())) {
+                        map.get(tag.getName()).add(file);
+                    } else {
+                        ArrayList<File> temp = new ArrayList<>();
+                        temp.add(file);
+                        map.put(tag.getName(), temp);
+                    }
+            } catch (Exception e) {
+                System.out.println(file.toString());
+            }
+
+            searchBtn = (Button) findViewById(R.id.select_button);
+            searchBtn.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    String search = searchString.getText() + "";
+                    ArrayList<File> searchResults = new ArrayList<File>();
+                    if(map.containsKey(search))
+                    {
+                        searchResults = map.get(search);
+                        for(int i = 0; i < searchResults.size(); i++)
+                        {
+                            myImageAdapter.add(searchResults.get(i).getAbsolutePath());
+                        }
+
+                    }
+                    else
+                    {
+                        System.out.println("No images found");
+                    }
+
+                }
+            });
+          //  for (Tag tag : results.get(0).getTags())
+          //  results = clarifai.recognize(new RecognitionRequest(file));
+
+           // taggingList = updateUForResult(recognitionActivity.recognizeBitmap(imageAdapter.decodeSampledBitmapFromUri(targetPath+file.getName(), 8, 8)));
+           // recognitionActivity.connection();
+
+          /* new AsyncTask<Bitmap, Void, RecognitionResult>() {
+
+               RecognitionActivity recognitionActivity = new RecognitionActivity();
+                ImageAdapter imageAdapter = new ImageAdapter(getApplicationContext());
+
+                @Override protected RecognitionResult doInBackground(Bitmap... bitmaps) {
+
+                    return recognitionActivity.recognizeBitmap(bitmaps[0]);
+                }
+                @Override protected void onPostExecute(RecognitionResult result) {
+                    updateUForResult(result);
+                }
+            }.execute();
+            taggingList = updateUForResult(recognitionActivity.recognizeBitmap(imageAdapter.decodeSampledBitmapFromUri(targetPath+file.getName(), 8, 8)));
+        }
+    }
+    /*public void postData(){
+        HttpClient client = new DefaultHttpClient();
+        HttpPost post = new HttpPost(https://api.clarifai.com/v1/tag/);
+        try{
+
+        }*/
+        }
+    }
+
+
+
+
+    private ArrayList<String> updateUForResult(RecognitionResult result) {
+        ArrayList<String> tagList = new ArrayList<>();
+
+        if (result != null) {
+            if (result.getStatusCode() == RecognitionResult.StatusCode.OK) {
+                // Display the list of tags in the UI.
+                StringBuilder b = new StringBuilder();
+                for (Tag tag : result.getTags()) {
+                    tagList.add(tag.getName());
+                }
+            }
+        }
+        return tagList;
+    }
     public class ImageAdapter extends BaseAdapter {
 
         private Context mContext;
@@ -116,50 +250,7 @@ public class MainActivity extends Activity {
     }
 
     ImageAdapter myImageAdapter;
-    @Override
-    public void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-        RecognitionActivity recognitionActivity = new RecognitionActivity();
-        ImageAdapter imageAdapter = new ImageAdapter(getApplicationContext());
-        ArrayList<File> fileArrayList = new ArrayList<File>();
-        GridView gridview = (GridView) findViewById(R.id.gridview);
-        myImageAdapter = new ImageAdapter(this);
-        gridview.setAdapter(myImageAdapter);
 
-        String ExternalStorageDirectoryPath = Environment
-                .getExternalStorageDirectory()
-                .getAbsolutePath();
-
-        String targetPath = ExternalStorageDirectoryPath + "/DCIM/Camera/";
-
-        Toast.makeText(getApplicationContext(), targetPath, Toast.LENGTH_LONG).show();
-        File targetDirector = new File(targetPath);
-
-        ArrayList<String> taggingList = new ArrayList<>();
-        File[] files = targetDirector.listFiles();
-        for (File file : files){
-            System.out.println(file.getName());
-            myImageAdapter.add(file.getAbsolutePath());
-            fileArrayList.add(file);
-            taggingList = updateUIForResult(recognitionActivity.recognizeBitmap(imageAdapter.decodeSampledBitmapFromUri(targetPath, 8, 8)));
-
-        }
-    }
-    private ArrayList<String> updateUIForResult(RecognitionResult result) {
-        ArrayList<String> tagList = new ArrayList<>();
-
-        if (result != null) {
-            if (result.getStatusCode() == RecognitionResult.StatusCode.OK) {
-                // Display the list of tags in the UI.
-                StringBuilder b = new StringBuilder();
-                for (Tag tag : result.getTags()) {
-                    tagList.add(tag.getName());
-                }
-            }
-        }
-        return tagList;
-    }
 
 }
 
