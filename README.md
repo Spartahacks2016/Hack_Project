@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # clarifai-android-starter
 This is a simple project to get you started using the Clarifai API in Android apps. It uses the [Clarifai Java Client](https://github.com/Clarifai/clarifai-java) to perform image recognition on photos stored on your device. Full Clarifai API documentation can be found at [developer.clarifai.com](http://developer.clarifai.com/).
 
@@ -28,3 +29,9 @@ Feel free to use this project as a base for building your app. You can also use 
 ```compile 'com.clarifai:clarifai-api-java:1.2.0'```
 
 More information on the client and usage examples can be found [here](https://github.com/Clarifai/clarifai-java).
+=======
+# Hack_Project
+https://github.com/clarifai
+https://github.com/nostra13/Android-Universal-Image-Loader
+https://github.com/boxme/PhotoGallery
+>>>>>>> 8d76f24d9ed3a0ea6aad41fb54a263ee63362e4c
