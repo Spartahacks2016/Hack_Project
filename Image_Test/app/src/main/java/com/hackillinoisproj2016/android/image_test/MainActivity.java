@@ -29,7 +29,10 @@ import com.clarifai.api.RecognitionRequest;
 import com.clarifai.api.RecognitionResult;
 import com.clarifai.api.Tag;
 import com.clarifai.api.exception.ClarifaiException;
+import com.firebase.client.ChildEventListener;
+import com.firebase.client.DataSnapshot;
 import com.firebase.client.Firebase;
+import com.firebase.client.FirebaseError;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -51,18 +54,57 @@ public class MainActivity extends Activity {
     private Button selectButton;
     private ImageView imageView;
     private TextView textView;
+    private Firebase myFirebaseRef;
+    private Firebase picturesRef;
+    private String textToDisplay;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-       Firebase.setAndroidContext(this);
+        Firebase.setAndroidContext(this);
         setContentView(R.layout.activity_main);
-        Firebase myFirebaseRef = new Firebase("https://<blazing-inferno-4590>.firebaseio.com/");
+        myFirebaseRef = new Firebase("https://imagefirebase.firebaseio.com/");
         imageView = (ImageView) findViewById(R.id.image_view);
-        textView = (TextView) findViewById(R.id.textdisp);
         //Bitmap bMap = BitmapFactory.decodeFile("/storage/emulated/0/DCIM/Camera" + "/20160227_010011.jpg");
         selectButton = (Button) findViewById(R.id.select_button);
-        myFirebaseRef.child("message").setValue("Do you have data? You'll love Firebase.");
+
+
+        picturesRef = myFirebaseRef.child("Pictures");
+        picturesRef.addChildEventListener(new ChildEventListener() {
+            @Override
+            public void onChildAdded(DataSnapshot dataSnapshot, String s) {
+
+                textToDisplay += (String)dataSnapshot.getValue();
+                textView.setText(textToDisplay);
+            }
+
+            @Override
+            public void onChildChanged(DataSnapshot dataSnapshot, String s) {
+
+            }
+
+            @Override
+            public void onChildRemoved(DataSnapshot dataSnapshot) {
+
+            }
+
+            @Override
+            public void onChildMoved(DataSnapshot dataSnapshot, String s) {
+
+            }
+
+            @Override
+            public void onCancelled(FirebaseError firebaseError) {
+
+            }
+        });
+
+        int databaseSize = 0;
+        for(int i = 0; i < databaseSize; i++)
+        {
+
+
+        }
 
         selectButton.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -109,10 +151,11 @@ public class MainActivity extends Activity {
                     int id = cursor.getInt(image_column_index);
                     path[i] = cursor.getString(image_path_index);
                     bt[i] = MediaStore.Images.Thumbnails.getThumbnail(getApplicationContext().getContentResolver(), id, MediaStore.Images.Thumbnails.MICRO_KIND, null)*/;
+
+
+
                     final Intent intent = new Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
                     startActivityForResult(intent, CODE_PICK);
-
-
                 }
 
         });
