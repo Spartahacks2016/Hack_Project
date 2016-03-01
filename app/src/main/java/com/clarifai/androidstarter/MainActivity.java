@@ -40,6 +40,8 @@ public class MainActivity extends Activity {
 
     Button searchBtn;
     EditText searchString;
+    ImageAdapter myImageAdapter;
+    File[] files;
 
     HashMap<String, ArrayList<File>> map;
 
@@ -50,75 +52,69 @@ public class MainActivity extends Activity {
 
         searchString = (EditText) findViewById(R.id.search_string);
 
-        StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
-        StrictMode.setThreadPolicy(policy);
+        //StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
+        //StrictMode.setThreadPolicy(policy);
         // picturesRef = myFirebaseRef.child("Pictures");
         //picturesRef.addChildEventListener(new ChildEventListener();
 
-        ImageAdapter imageAdapter = new ImageAdapter(getApplicationContext());
+        ArrayList<String> taggingList = new ArrayList<>();
+        map = new HashMap<>();
+        String ExternalStorageDirectoryPath = Environment
+                .getExternalStorageDirectory()
+                .getAbsolutePath();
+        String targetPath = ExternalStorageDirectoryPath + "/DCIM/Camera/";
         ArrayList<File> fileArrayList = new ArrayList<File>();
+        File targetDirector = new File(targetPath);
+        files = targetDirector.listFiles();
+        ClarifaiClient clarifai = new ClarifaiClient("QwyVMelyYYyB57bUcmAj5pNJ8DFbF2vX_otHSwP1", "uTvXRCBEaenYGwAbae56BIcxavMduS6TtJHMnYCZ");
+
+
+        ImageAdapter imageAdapter = new ImageAdapter(getApplicationContext());
         GridView gridview = (GridView) findViewById(R.id.gridview);
         myImageAdapter = new ImageAdapter(this);
         gridview.setAdapter(myImageAdapter);
 
-        String ExternalStorageDirectoryPath = Environment
-                .getExternalStorageDirectory()
-                .getAbsolutePath();
 
-        String targetPath = ExternalStorageDirectoryPath + "/DCIM/Camera/";
+        new AsyncTask<File, Void, Tag>() {
+            RecognitionActivity recognitionActivity = new RecognitionActivity();
+            Bitmap bitmap = BitmapFactory.decodeFile(files[0].getAbsolutePath());
+            @Override
+            protected RecognitionResult doInBackground(Bitmap... bitmaps) {
+                return recognitionActivity.recognizeBitmap(bitmap);
+            }
+            @Override protected void onPostExecute(RecognitionResult result) {
+                //updateUIForResult(result);
+            }
+        }.execute();
 
         Toast.makeText(getApplicationContext(), targetPath, Toast.LENGTH_LONG).show();
-        File targetDirector = new File(targetPath);
 
-        ArrayList<String> taggingList = new ArrayList<>();
-        File[] files = targetDirector.listFiles();
-        ClarifaiClient clarifai = new ClarifaiClient("QwyVMelyYYyB57bUcmAj5pNJ8DFbF2vX_otHSwP1", "uTvXRCBEaenYGwAbae56BIcxavMduS6TtJHMnYCZ");
-        for (File file : files) {
-            //myImageAdapter.add(file.getAbsolutePath());
-            fileArrayList.add(file);
-            map = new HashMap<>();
-            try{
-                List<RecognitionResult> results =
-                        clarifai.recognize(new RecognitionRequest(file));
-                for (Tag tag : results.get(0).getTags())
-                    if(map.containsKey(tag.getName())) {
-                        map.get(tag.getName()).add(file);
-                    } else {
-                        ArrayList<File> temp = new ArrayList<>();
-                        temp.add(file);
-                        map.put(tag.getName(), temp);
-                    }
-            } catch (Exception e) {
-                System.out.println(file.toString());
-            }
 
-            searchBtn = (Button) findViewById(R.id.select_button);
-            searchBtn.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    String search = searchString.getText() + "";
-                    ArrayList<File> searchResults = new ArrayList<File>();
-                    if(map.containsKey(search))
-                    {
-                        searchResults = map.get(search);
-                        for(int i = 0; i < searchResults.size(); i++)
-                        {
-                            myImageAdapter.add(searchResults.get(i).getAbsolutePath());
-                        }
-
-                    }
-                    else
-                    {
-                        System.out.println("No images found");
+        searchBtn = (Button) findViewById(R.id.select_button);
+        searchBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                String search = searchString.getText() + "";
+                ArrayList<File> searchResults = new ArrayList<File>();
+                if (map.containsKey(search)) {
+                    searchResults = map.get(search);
+                    for (int i = 0; i < searchResults.size(); i++) {
+                        myImageAdapter.add(searchResults.get(i).getAbsolutePath());
                     }
 
+                } else {
+                    System.out.println("No images found");
                 }
-            });
-          //  for (Tag tag : results.get(0).getTags())
-          //  results = clarifai.recognize(new RecognitionRequest(file));
 
-           // taggingList = updateUForResult(recognitionActivity.recognizeBitmap(imageAdapter.decodeSampledBitmapFromUri(targetPath+file.getName(), 8, 8)));
-           // recognitionActivity.connection();
+            }
+        });
+
+
+        //  for (Tag tag : results.get(0).getTags())
+        //  results = clarifai.recognize(new RecognitionRequest(file));
+
+        // taggingList = updateUForResult(recognitionActivity.recognizeBitmap(imageAdapter.decodeSampledBitmapFromUri(targetPath+file.getName(), 8, 8)));
+        // recognitionActivity.connection();
 
           /* new AsyncTask<Bitmap, Void, RecognitionResult>() {
 
@@ -142,10 +138,32 @@ public class MainActivity extends Activity {
         try{
 
         }*/
-        }
     }
 
+    public HashMap<Tag, ArrayList<File>> godMethod(File[] files, ClarifaiClient clarifai) {
+        HashMap<Tag, ArrayList<File>> map = new HashMap<>();
+        for (File file : files) {
+            //myImageAdapter.add(file.getAbsolutePath());
+            ArrayList<File> fileArrayList = new ArrayList<File>();
+            fileArrayList.add(file);
+            try {
+                List<RecognitionResult> results =
+                        clarifai.recognize(new RecognitionRequest(file));
+                for (Tag tag : results.get(0).getTags())
+                    if (map.containsKey(tag.getName())) {
+                        map.get(tag.getName()).add(file);
+                    } else {
+                        ArrayList<File> temp = new ArrayList<>();
+                        temp.add(file);
+                        map.put(tag, temp);
+                    }
+            } catch (Exception e) {
+                System.out.println(file.toString());
+            }
+        }
 
+        return map;
+    }
 
 
     private ArrayList<String> updateUForResult(RecognitionResult result) {
@@ -162,6 +180,7 @@ public class MainActivity extends Activity {
         }
         return tagList;
     }
+
     public class ImageAdapter extends BaseAdapter {
 
         private Context mContext;
@@ -171,7 +190,7 @@ public class MainActivity extends Activity {
             mContext = c;
         }
 
-        void add(String path){
+        void add(String path) {
             itemList.add(path);
         }
 
@@ -197,7 +216,7 @@ public class MainActivity extends Activity {
             ImageView imageView;
             if (convertView == null) {  // if it's not recycled, initialize some attributes
                 imageView = new ImageView(mContext);
-                imageView.setLayoutParams(new GridView.LayoutParams(220, 220));
+                imageView.setLayoutParams(new GridView.LayoutParams(8, 8));
                 imageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
                 imageView.setPadding(8, 8, 8, 8);
             } else {
@@ -228,9 +247,7 @@ public class MainActivity extends Activity {
             return bm;
         }
 
-        public int calculateInSampleSize(
-
-                BitmapFactory.Options options, int reqWidth, int reqHeight) {
+        public int calculateInSampleSize(BitmapFactory.Options options, int reqWidth, int reqHeight) {
             // Raw height and width of image
             final int height = options.outHeight;
             final int width = options.outWidth;
@@ -238,19 +255,14 @@ public class MainActivity extends Activity {
 
             if (height > reqHeight || width > reqWidth) {
                 if (width > height) {
-                    inSampleSize = Math.round((float)height / (float)reqHeight);
+                    inSampleSize = Math.round((float) height / (float) reqHeight);
                 } else {
-                    inSampleSize = Math.round((float)width / (float)reqWidth);
+                    inSampleSize = Math.round((float) width / (float) reqWidth);
                 }
             }
 
             return inSampleSize;
         }
-
     }
-
-    ImageAdapter myImageAdapter;
-
-
 }
 
